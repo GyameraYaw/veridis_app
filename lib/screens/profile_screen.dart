@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../services/wallet_service.dart';
 import '../theme/app_theme.dart';
@@ -12,14 +13,54 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final TextEditingController _usernameController = TextEditingController(
-    text: 'John Doe',
-  );
-  final TextEditingController _mobileController = TextEditingController(
-    text: '+233 24 123 4567',
-  );
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
   final _svc = SessionService();
   final _wallet = WalletService();
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final data = await AuthService().getUserDoc();
+    if (!mounted) return;
+    if (data != null) {
+      _usernameController.text = data['name'] as String? ?? '';
+      _mobileController.text = data['mobileMoneyNumber'] as String? ?? '';
+      setState(() {});
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    setState(() => _isSaving = true);
+    try {
+      await AuthService().updateProfile(
+        name: _usernameController.text.trim(),
+        mobileMoneyNumber: _mobileController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save changes.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _signOut() async {
+    SessionService().clearLocalData();
+    WalletService().clearLocalData();
+    await AuthService().signOut();
+  }
 
   @override
   void dispose() {
@@ -60,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    labelText: 'Username',
+                    labelText: 'Full Name',
                     prefixIcon: Icon(Icons.account_circle),
                   ),
                 ),
@@ -68,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: _mobileController,
                   decoration: const InputDecoration(
-                    labelText: 'Mobile Number',
+                    labelText: 'Mobile Money Number',
                     prefixIcon: Icon(Icons.phone),
                   ),
                   keyboardType: TextInputType.phone,
@@ -77,14 +118,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Profile updated successfully!'),
-                        ),
-                      );
-                    },
-                    child: const Text('Save Changes'),
+                    onPressed: _isSaving ? null : _saveChanges,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Save Changes'),
                   ),
                 ),
               ],
@@ -116,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Wallet balance — tappable shortcut
+          // Wallet balance
           GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -166,6 +210,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: AppColors.textSubtle,
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Sign Out
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _signOut,
+              icon: const Icon(Icons.logout, color: AppColors.errorRed),
+              label: const Text(
+                'Sign Out',
+                style: TextStyle(color: AppColors.errorRed),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.errorRed),
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),

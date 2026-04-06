@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,25 +13,16 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _idController = TextEditingController();
-  final TextEditingController _pinController = TextEditingController();
-  final TextEditingController _confirmPinController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  bool _obscurePin = true;
-  bool _obscureConfirmPin = true;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
-
-  String? _selectedCampus;
-  final List<String> _campuses = [
-    'Main Campus',
-    'East Campus',
-    'North Campus',
-    'South Campus',
-    'Accra City Campus',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -69,30 +62,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icon(Icons.person),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      if (value.length < 3) {
-                        return 'Name must be at least 3 characters';
+                      if (value == null || value.isEmpty) return 'Please enter your name';
+                      if (value.length < 3) return 'Name must be at least 3 characters';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Email
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email Address',
+                      hintText: 'Enter your email',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Please enter your email';
+                      if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        return 'Please enter a valid email';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  // Phone Number
+                  // Phone Number (Mobile Money)
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
-                      labelText: 'Phone Number',
+                      labelText: 'Mobile Money Number',
                       prefixText: '+233 ',
                       hintText: 'XX XXX XXXX',
                       prefixIcon: Icon(Icons.phone),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your phone number';
+                        return 'Please enter your mobile money number';
                       }
                       final digits = value.replaceAll(RegExp(r'\D'), '');
                       if (digits.length != 9) {
@@ -103,111 +111,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  // Student/Staff ID
-                  TextFormField(
-                    controller: _idController,
-                    decoration: const InputDecoration(
-                      labelText: 'Student/Staff ID',
-                      hintText: 'e.g., ACU123456',
-                      prefixIcon: Icon(Icons.badge),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your campus ID';
-                      }
-                      if (value.length < 6) {
-                        return 'ID must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
 
-                  // Campus Selection
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedCampus,
-                    decoration: const InputDecoration(
-                      labelText: 'Select Campus',
-                      prefixIcon: Icon(Icons.school),
-                    ),
-                    items: _campuses.map((String campus) {
-                      return DropdownMenuItem<String>(
-                        value: campus,
-                        child: Text(campus),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() => _selectedCampus = newValue);
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please select your campus';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // PIN
+                  // Password
                   TextFormField(
-                    controller: _pinController,
-                    obscureText: _obscurePin,
-                    keyboardType: TextInputType.number,
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'Create PIN (4-6 digits)',
+                      labelText: 'Password',
+                      hintText: 'At least 6 characters',
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePin
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                           color: AppColors.textSubtle,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePin = !_obscurePin),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please create a PIN';
-                      }
-                      if (value.length < 4 || value.length > 6) {
-                        return 'PIN must be 4-6 digits';
-                      }
-                      if (!RegExp(r'^\d+$').hasMatch(value)) {
-                        return 'PIN must contain only numbers';
-                      }
+                      if (value == null || value.isEmpty) return 'Please create a password';
+                      if (value.length < 6) return 'Password must be at least 6 characters';
                       return null;
                     },
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  // Confirm PIN
+                  // Confirm Password
                   TextFormField(
-                    controller: _confirmPinController,
-                    obscureText: _obscureConfirmPin,
-                    keyboardType: TextInputType.number,
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
-                      labelText: 'Confirm PIN',
+                      labelText: 'Confirm Password',
                       prefixIcon: const Icon(Icons.lock_reset),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPin
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                          _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                           color: AppColors.textSubtle,
                         ),
-                        onPressed: () => setState(
-                            () => _obscureConfirmPin = !_obscureConfirmPin),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your PIN';
-                      }
-                      if (value != _pinController.text) {
-                        return 'PINs do not match';
-                      }
+                      if (value == null || value.isEmpty) return 'Please confirm your password';
+                      if (value != _passwordController.text) return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -219,23 +165,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Checkbox(
                         value: _agreeToTerms,
-                        onChanged: (value) =>
-                            setState(() => _agreeToTerms = value!),
+                        onChanged: (value) => setState(() => _agreeToTerms = value!),
                       ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 12),
-                            const Text(
-                              'I agree to the Terms & Conditions',
-                              style: AppTextStyles.bodyLarge,
-                            ),
+                            const Text('I agree to the Terms & Conditions', style: AppTextStyles.bodyLarge),
                             const SizedBox(height: 4),
                             GestureDetector(
-                              onTap: () {
-                                // TODO: Show terms & conditions
-                              },
+                              onTap: () {},
                               child: const Text(
                                 'Read Terms & Conditions',
                                 style: TextStyle(
@@ -262,10 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                             )
                           : const Text('Create Account'),
                     ),
@@ -277,16 +214,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Already have an account? ',
-                          style: AppTextStyles.bodyMedium,
-                        ),
+                        const Text('Already have an account? ', style: AppTextStyles.bodyMedium),
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text(
-                            'Sign In',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                          child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -300,17 +231,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: AppColors.freshGreen,
-                          size: 20,
-                        ),
+                        const Icon(Icons.info_outline, color: AppColors.freshGreen, size: 20),
                         const SizedBox(width: 12),
-                        Expanded(
+                        const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Campus Verification',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -318,8 +245,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   fontSize: 14,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
+                              SizedBox(height: 4),
+                              Text(
                                 'Your student/staff ID will be verified with campus records. '
                                 'Please ensure it matches your official university ID.',
                                 style: AppTextStyles.bodyMedium,
@@ -342,21 +269,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (!_agreeToTerms) {
       _showError('Please agree to the Terms & Conditions');
       return;
     }
 
     setState(() => _isLoading = true);
+    try {
+      await AuthService().register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        mobileMoneyNumber: '+233${_phoneController.text.trim()}',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully!')),
+      );
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      _showError(_authError(e.code));
+    } catch (e) {
+      _showError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
-    // TODO: Implement Firebase registration
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-    _showSuccess();
+  String _authError(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'An account with this email already exists';
+      case 'invalid-email':
+        return 'Invalid email address';
+      case 'weak-password':
+        return 'Password is too weak';
+      default:
+        return 'Registration failed. Please try again.';
+    }
   }
 
   void _showError(String message) {
@@ -369,26 +319,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _showSuccess() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created successfully!'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) Navigator.pop(context);
-    });
-  }
-
   @override
   void dispose() {
     _nameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
-    _idController.dispose();
-    _pinController.dispose();
-    _confirmPinController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }

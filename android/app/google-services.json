@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "917359166242",
+    "project_id": "veridis-app",
+    "storage_bucket": "veridis-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:917359166242:android:81a4772edcc56d96d0db7b",
+        "android_client_info": {
+          "package_name": "com.example.veridis_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYK_bPR3e5Qve_zAdvenIimNeinORUWoc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

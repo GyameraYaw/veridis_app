@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'register_screen.dart';
-import 'home_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,11 +13,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _isLoading = false;
-  bool _obscurePin = true;
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +39,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.recycling,
-                      size: 64,
-                      color: Colors.white,
-                    ),
+                    const Icon(Icons.recycling, size: 64, color: Colors.white),
                     const SizedBox(height: 12),
                     const Text('VERIDIS', style: AppTextStyles.heroDisplayLarge),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Smart Campus Recycling',
-                      style: AppTextStyles.heroLabel,
-                    ),
+                    const Text('Smart Campus Recycling', style: AppTextStyles.heroLabel),
                   ],
                 ),
               ),
@@ -75,60 +69,40 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Phone Number
+                    // Email
                     TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
-                        labelText: 'Phone Number',
-                        prefixText: '+233 ',
-                        hintText: 'XX XXX XXXX',
-                        prefixIcon: Icon(Icons.phone),
+                        labelText: 'Email Address',
+                        hintText: 'Enter your email',
+                        prefixIcon: Icon(Icons.email),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your phone number';
-                        }
-                        if (value.length != 9) {
-                          return 'Please enter a valid Ghanaian number';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // PIN
+                    // Password
                     TextFormField(
-                      controller: _pinController,
-                      obscureText: _obscurePin,
-                      keyboardType: TextInputType.number,
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: 'PIN',
+                        labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePin
+                            _obscurePassword
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                             color: AppColors.textSubtle,
                           ),
                           onPressed: () =>
-                              setState(() => _obscurePin = !_obscurePin),
+                              setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your PIN';
-                        }
-                        if (value.length < 4) {
-                          return 'PIN must be at least 4 digits';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Remember me & Forgot PIN
+                    // Remember me & Forgot Password
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -139,15 +113,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               onChanged: (value) =>
                                   setState(() => _rememberMe = value!),
                             ),
-                            const Text(
-                              'Remember me',
-                              style: AppTextStyles.bodyMedium,
-                            ),
+                            const Text('Remember me', style: AppTextStyles.bodyMedium),
                           ],
                         ),
                         TextButton(
                           onPressed: () {},
-                          child: const Text('Forgot PIN?'),
+                          child: const Text('Forgot Password?'),
                         ),
                       ],
                     ),
@@ -178,8 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Expanded(child: Divider()),
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                           child: Text('or', style: AppTextStyles.bodyMedium),
                         ),
                         const Expanded(child: Divider()),
@@ -192,17 +162,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "Don't have an account? ",
-                            style: AppTextStyles.bodyMedium,
-                          ),
+                          const Text("Don't have an account? ", style: AppTextStyles.bodyMedium),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
-                                ),
+                                MaterialPageRoute(builder: (context) => const RegisterScreen()),
                               );
                             },
                             child: const Text(
@@ -219,18 +184,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: AppDecorations.infoBox,
-                      child: Row(
+                      child: const Row(
                         children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: AppColors.freshGreen,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          Icon(Icons.info_outline, color: AppColors.freshGreen, size: 20),
+                          SizedBox(width: 12),
+                          Expanded(
                             child: Text(
                               'For Academic City University students and staff only. '
-                              'Use your registered campus phone number.',
+                              'Use your registered campus email address.',
                               style: AppTextStyles.bodyMedium,
                             ),
                           ),
@@ -248,38 +209,40 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() async {
-    if (_phoneController.text.isEmpty || _pinController.text.isEmpty) {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showError('Please fill in all fields');
       return;
     }
 
-    final phoneNumber = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    if (phoneNumber.length != 9) {
-      _showError('Please enter a valid Ghanaian phone number (9 digits)');
-      return;
-    }
-
-    if (_pinController.text.length < 4) {
-      _showError('PIN must be at least 4 digits');
-      return;
-    }
-
     setState(() => _isLoading = true);
+    try {
+      await AuthService().signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      // Navigation handled by auth state gate in main.dart
+    } on FirebaseAuthException catch (e) {
+      _showError(_authError(e.code));
+    } catch (e) {
+      _showError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
-    // TODO: Implement Firebase Authentication
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Welcome back!')),
-    );
+  String _authError(String code) {
+    switch (code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Invalid email or password';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      default:
+        return 'Sign in failed. Please try again.';
+    }
   }
 
   void _showError(String message) {
@@ -293,8 +256,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _pinController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 }

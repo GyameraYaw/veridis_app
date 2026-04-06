@@ -6,6 +6,7 @@ import 'profile_screen.dart';
 import 'qr_scan_screen.dart';
 import 'history_screen.dart';
 import 'wallet_screen.dart';
+import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../services/wallet_service.dart';
 import '../theme/app_theme.dart';
@@ -20,6 +21,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadName();
+  }
+
+  Future<void> _loadName() async {
+    final data = await AuthService().getUserDoc();
+    if (!mounted) return;
+    final full = data?['name'] as String? ?? '';
+    setState(() => _firstName = full.split(' ').first);
+  }
 
   // Getter (not const) so Statistics/Profile always rebuild with fresh data
   List<Widget> get _pages => [
@@ -46,9 +61,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Good day,',
                 style: AppTextStyles.heroCaption,
               ),
-              const Text(
-                'VERIDIS',
-                style: TextStyle(
+              Text(
+                _firstName.isEmpty ? 'VERIDIS' : _firstName,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -355,22 +370,25 @@ class _HomeContentState extends State<HomeContent> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-        minimumSize: const Size(0, 72),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 26, color: Colors.white),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 11),
-            textAlign: TextAlign.center,
-          ),
-        ],
+    return SizedBox(
+      height: 80,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 26, color: Colors.white),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
