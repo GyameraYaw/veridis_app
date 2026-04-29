@@ -7,6 +7,7 @@ class WalletTransaction {
   final double amount;
   final String description;
   final bool isPending; // true for withdrawal requests awaiting admin processing
+  final String? mobileMoneyNumber; // only set for withdrawalRequest transactions
 
   const WalletTransaction({
     required this.id,
@@ -15,5 +16,6 @@ class WalletTransaction {
     required this.amount,
     required this.description,
     this.isPending = false,
+    this.mobileMoneyNumber,
   });
 }

@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/admin/admin_shell.dart';
 import 'services/session_service.dart';
 import 'services/wallet_service.dart';
+import 'services/admin_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -37,7 +39,22 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData) {
             SessionService().loadUserSessions();
             WalletService().loadUserTransactions();
-            return const HomeScreen();
+            return FutureBuilder<bool>(
+              future: AdminService().isCurrentUserAdmin(),
+              builder: (context, adminSnap) {
+                if (adminSnap.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    backgroundColor: Color(0xFF2E7D32),
+                    body: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  );
+                }
+                return adminSnap.data == true
+                    ? const AdminShell()
+                    : const HomeScreen();
+              },
+            );
           }
           return const LoginScreen();
         },

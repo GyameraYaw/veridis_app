@@ -83,6 +83,7 @@ class WalletService {
       amount: amount,
       description: 'Withdrawal to $momoNumber',
       isPending: true,
+      mobileMoneyNumber: momoNumber,
     );
     _transactions.insert(0, tx);
     _writeTxToFirestore(tx);
@@ -102,6 +103,8 @@ class WalletService {
       'description': tx.description,
       'isPending': tx.isPending,
       'timestamp': Timestamp.fromDate(tx.timestamp),
+      if (tx.mobileMoneyNumber != null)
+        'mobileMoneyNumber': tx.mobileMoneyNumber,
     });
   }
 }

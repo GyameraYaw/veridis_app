@@ -26,9 +26,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         .limit(10)
         .get();
 
-    return snapshot.docs.map((doc) {
-      return {'uid': doc.id, ...doc.data()};
-    }).toList();
+    return snapshot.docs
+        .where((doc) => doc.data()['isAdmin'] != true)
+        .map((doc) => {'uid': doc.id, ...doc.data()})
+        .toList();
   }
 
   @override
@@ -67,7 +68,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return const Center(child: Text('Failed to load leaderboard.'));
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Text(
+                      'Failed to load leaderboard.\n\n${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                );
               }
               final entries = snapshot.data ?? [];
               if (entries.isEmpty) {
