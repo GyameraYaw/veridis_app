@@ -179,25 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Campus info box
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: AppDecorations.infoBox,
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: AppColors.freshGreen, size: 20),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'For Academic City University students and staff only. '
-                              'Use your registered campus email address.',
-                              style: AppTextStyles.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),

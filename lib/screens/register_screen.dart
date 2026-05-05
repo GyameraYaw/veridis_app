@@ -224,40 +224,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // Campus info box
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: AppDecorations.infoBox,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, color: AppColors.freshGreen, size: 20),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Campus Verification',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.freshGreen,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Your student/staff ID will be verified with campus records. '
-                                'Please ensure it matches your official university ID.',
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                 ],
               ),
             ),
