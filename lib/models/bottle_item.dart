@@ -4,14 +4,12 @@ import 'recycling_session.dart';
 /// A session contains a list of these.
 class BottleItem {
   final MaterialType materialType;
-  final double weightKg;
   final double earnings;
   final double co2Saved;
   final DateTime scannedAt;
 
   const BottleItem({
     required this.materialType,
-    required this.weightKg,
     required this.earnings,
     required this.co2Saved,
     required this.scannedAt,

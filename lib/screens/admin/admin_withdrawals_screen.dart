@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
+import '../../services/paystack_service.dart';
 import '../../theme/app_theme.dart';
 
 class AdminWithdrawalsScreen extends StatelessWidget {
@@ -83,9 +84,16 @@ class AdminWithdrawalsScreen extends StatelessWidget {
   }
 }
 
-class _WithdrawalTile extends StatelessWidget {
+class _WithdrawalTile extends StatefulWidget {
   final PendingWithdrawal withdrawal;
   const _WithdrawalTile({required this.withdrawal});
+
+  @override
+  State<_WithdrawalTile> createState() => _WithdrawalTileState();
+}
+
+class _WithdrawalTileState extends State<_WithdrawalTile> {
+  bool _isProcessing = false;
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
@@ -102,8 +110,8 @@ class _WithdrawalTile extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Reject Withdrawal'),
         content: Text(
-          'Reject GHS ${withdrawal.amount.toStringAsFixed(2)} withdrawal '
-          'for ${withdrawal.userName}?\n\n'
+          'Reject GHS ${widget.withdrawal.amount.toStringAsFixed(2)} withdrawal '
+          'for ${widget.withdrawal.userName}?\n\n'
           'The amount will be refunded to their wallet balance.',
         ),
         actions: [
@@ -124,9 +132,9 @@ class _WithdrawalTile extends StatelessWidget {
 
     if (confirmed != true) return;
     await AdminService().rejectWithdrawal(
-      txId: withdrawal.txId,
-      userId: withdrawal.userId,
-      amount: withdrawal.amount,
+      txId: widget.withdrawal.txId,
+      userId: widget.withdrawal.userId,
+      amount: widget.withdrawal.amount,
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +149,10 @@ class _WithdrawalTile extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm Payment'),
         content: Text(
-          'Mark GHS ${withdrawal.amount.toStringAsFixed(2)} withdrawal as paid?\n\nThis cannot be undone.',
+          'Mark GHS ${widget.withdrawal.amount.toStringAsFixed(2)} for '
+          '${widget.withdrawal.userName} as paid?\n\n'
+          'A real Paystack transfer will be initiated. The withdrawal will '
+          'only be marked paid on success.',
         ),
         actions: [
           TextButton(
@@ -157,11 +168,50 @@ class _WithdrawalTile extends StatelessWidget {
     );
 
     if (confirmed != true) return;
-    await AdminService().markWithdrawalPaid(withdrawal.txId);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Marked as paid')),
-      );
+
+    setState(() => _isProcessing = true);
+    try {
+      final transferCode =
+          await AdminService().markWithdrawalPaid(widget.withdrawal);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Paid via MoMo — Ref: $transferCode')),
+        );
+      }
+    } on PaystackTransferException catch (e) {
+      if (context.mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Transfer Failed'),
+            content: Text(e.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Unexpected Error'),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -179,14 +229,14 @@ class _WithdrawalTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  withdrawal.userName,
+                  widget.withdrawal.userName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                     color: AppColors.textDark,
                   ),
                 ),
-                if (withdrawal.mobileMoneyNumber.isNotEmpty) ...[
+                if (widget.withdrawal.mobileMoneyNumber.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -194,7 +244,7 @@ class _WithdrawalTile extends StatelessWidget {
                           size: 14, color: AppColors.forestGreen),
                       const SizedBox(width: 4),
                       Text(
-                        withdrawal.mobileMoneyNumber,
+                        widget.withdrawal.mobileMoneyNumber,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -206,14 +256,16 @@ class _WithdrawalTile extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 2),
-                Text(withdrawal.description, style: AppTextStyles.labelSmall),
+                Text(widget.withdrawal.description,
+                    style: AppTextStyles.labelSmall),
                 const SizedBox(height: 2),
-                Text(_formatDate(withdrawal.timestamp),
+                Text(_formatDate(widget.withdrawal.timestamp),
                     style: AppTextStyles.labelSmall),
                 const SizedBox(height: AppSpacing.sm),
                 // Pending badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.pendingAmber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(AppRadius.chip),
@@ -235,7 +287,7 @@ class _WithdrawalTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'GHS ${withdrawal.amount.toStringAsFixed(2)}',
+                'GHS ${widget.withdrawal.amount.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -247,13 +299,23 @@ class _WithdrawalTile extends StatelessWidget {
                 width: 110,
                 height: 36,
                 child: ElevatedButton(
-                  onPressed: () => _confirmAndMarkPaid(context),
+                  onPressed:
+                      _isProcessing ? null : () => _confirmAndMarkPaid(context),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     textStyle: const TextStyle(
                         fontSize: 12, fontWeight: FontWeight.w600),
                   ),
-                  child: const Text('Mark Paid'),
+                  child: _isProcessing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Mark Paid'),
                 ),
               ),
               const SizedBox(height: 6),
@@ -261,7 +323,8 @@ class _WithdrawalTile extends StatelessWidget {
                 width: 110,
                 height: 36,
                 child: OutlinedButton(
-                  onPressed: () => _confirmAndReject(context),
+                  onPressed:
+                      _isProcessing ? null : () => _confirmAndReject(context),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     side: const BorderSide(color: AppColors.errorRed),

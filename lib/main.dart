@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -8,11 +9,17 @@ import 'screens/admin/admin_shell.dart';
 import 'services/session_service.dart';
 import 'services/wallet_service.dart';
 import 'services/admin_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+  await NotificationService.init();
   runApp(const MyApp());
 }
 
@@ -38,7 +45,6 @@ class MyApp extends StatelessWidget {
           }
           if (snapshot.hasData) {
             SessionService().loadUserSessions();
-            WalletService().loadUserTransactions();
             return FutureBuilder<bool>(
               future: AdminService().isCurrentUserAdmin(),
               builder: (context, adminSnap) {

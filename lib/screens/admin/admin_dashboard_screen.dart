@@ -24,6 +24,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
+  Future<void> _runMigration() async {
+    try {
+      await AdminService().migrateBottleCounts();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bottle counts updated for all users.')),
+      );
+      _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Migration failed: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
@@ -50,7 +66,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
         final stats = snapshot.data!;
         final totalUsers = stats['totalUsers'] as int;
-        final totalWeightKg = stats['totalWeightKg'] as double;
+        final totalBottleCount = stats['totalBottleCount'] as int;
         final pendingCount = stats['pendingCount'] as int;
         final pendingTotalGhs = stats['pendingTotalGhs'] as double;
 
@@ -74,11 +90,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total Weight Recycled',
+                    const Text('Total Bottles Recycled',
                         style: AppTextStyles.heroLabel),
                     const SizedBox(height: 6),
                     Text(
-                      '${totalWeightKg.toStringAsFixed(2)} kg',
+                      '$totalBottleCount',
                       style: AppTextStyles.heroDisplayLarge,
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -116,8 +132,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Expanded(
                     child: _metricCard(
                       icon: Icons.recycling,
-                      value: '${totalWeightKg.toStringAsFixed(1)} kg',
-                      label: 'Total Recycled',
+                      value: '$totalBottleCount',
+                      label: 'Total Bottles',
                     ),
                   ),
                 ],
@@ -150,6 +166,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onPressed: _refresh,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Refresh'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: OutlinedButton.icon(
+                  onPressed: _runMigration,
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Recalculate Bottle Counts'),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),

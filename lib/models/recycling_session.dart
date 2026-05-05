@@ -4,13 +4,13 @@ export 'bottle_item.dart';
 
 enum MaterialType { plastic, glass, unknown }
 
-// Earnings rate per kg
-const double kPlasticRateGhs = 0.30;
-const double kGlassRateGhs = 0.20;
+// Earnings rate per bottle
+const double kPlasticRateGhs = 0.50;
+const double kGlassRateGhs = 0.30;
 
-// CO2 saved per kg
-const double kPlasticCo2PerKg = 2.5;
-const double kGlassCo2PerKg = 0.5;
+// CO2 saved per bottle
+const double kPlasticCo2PerBottle = 0.5;
+const double kGlassCo2PerBottle = 0.2;
 
 class RecyclingSession {
   final String id;
@@ -28,9 +28,6 @@ class RecyclingSession {
   });
 
   // Computed totals derived from the bottles list
-  double get totalWeight =>
-      bottles.fold(0.0, (sum, b) => sum + b.weightKg);
-
   double get totalEarnings =>
       bottles.fold(0.0, (sum, b) => sum + b.earnings);
 
@@ -50,23 +47,23 @@ class RecyclingSession {
 
   // --- Static helpers used throughout the app ---
 
-  static double earningsFor(MaterialType type, double kg) {
+  static double earningsFor(MaterialType type) {
     switch (type) {
       case MaterialType.plastic:
-        return double.parse((kg * kPlasticRateGhs).toStringAsFixed(2));
+        return kPlasticRateGhs;
       case MaterialType.glass:
-        return double.parse((kg * kGlassRateGhs).toStringAsFixed(2));
+        return kGlassRateGhs;
       case MaterialType.unknown:
         return 0.0;
     }
   }
 
-  static double co2For(MaterialType type, double kg) {
+  static double co2For(MaterialType type) {
     switch (type) {
       case MaterialType.plastic:
-        return double.parse((kg * kPlasticCo2PerKg).toStringAsFixed(2));
+        return kPlasticCo2PerBottle;
       case MaterialType.glass:
-        return double.parse((kg * kGlassCo2PerKg).toStringAsFixed(2));
+        return kGlassCo2PerBottle;
       case MaterialType.unknown:
         return 0.0;
     }

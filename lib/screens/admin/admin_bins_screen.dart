@@ -1,10 +1,43 @@
 import 'package:flutter/material.dart';
 import '../../models/bin_status.dart';
 import '../../services/admin_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 
-class AdminBinsScreen extends StatelessWidget {
+class AdminBinsScreen extends StatefulWidget {
   const AdminBinsScreen({super.key});
+
+  @override
+  State<AdminBinsScreen> createState() => _AdminBinsScreenState();
+}
+
+class _AdminBinsScreenState extends State<AdminBinsScreen> {
+  // Tracks the last fill % at which each bin triggered a notification
+  final Map<String, double> _lastNotifiedPercent = {};
+
+  void _checkThresholds(List<BinStatus> bins) {
+    for (final bin in bins) {
+      final last = _lastNotifiedPercent[bin.binId] ?? 0.0;
+      if (bin.fillPercent >= 100 && last < 100) {
+        NotificationService.showBinAlert(
+          binId: bin.binId,
+          location: bin.location,
+          fillPercent: bin.fillPercent,
+        );
+        _lastNotifiedPercent[bin.binId] = 100;
+      } else if (bin.fillPercent >= 80 && last < 80) {
+        NotificationService.showBinAlert(
+          binId: bin.binId,
+          location: bin.location,
+          fillPercent: bin.fillPercent,
+        );
+        _lastNotifiedPercent[bin.binId] = 80;
+      } else if (bin.fillPercent < 80) {
+        // Reset so alert fires again if bin fills up again after being emptied
+        _lastNotifiedPercent[bin.binId] = 0;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +56,7 @@ class AdminBinsScreen extends StatelessWidget {
         }
 
         final bins = snapshot.data ?? [];
+        _checkThresholds(bins);
         final alertBins = bins.where((b) => b.fillPercent >= 80).toList();
 
         if (bins.isEmpty) {

@@ -11,26 +11,11 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  late Future<List<Map<String, dynamic>>> _leaderboardFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _leaderboardFuture = _fetchLeaderboard();
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchLeaderboard() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .orderBy('totalWeight', descending: true)
-        .limit(10)
-        .get();
-
-    return snapshot.docs
-        .where((doc) => doc.data()['isAdmin'] != true)
-        .map((doc) => {'uid': doc.id, ...doc.data()})
-        .toList();
-  }
+  final _leaderboardStream = FirebaseFirestore.instance
+      .collection('users')
+      .orderBy('totalBottleCount', descending: true)
+      .limit(10)
+      .snapshots();
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +46,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _leaderboardFuture,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _leaderboardStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -79,7 +64,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 );
               }
-              final entries = snapshot.data ?? [];
+              final entries = (snapshot.data?.docs ?? [])
+                  .where((doc) => (doc.data() as Map<String, dynamic>)['isAdmin'] != true)
+                  .toList();
               if (entries.isEmpty) {
                 return const Center(child: Text('No data yet. Start recycling!'));
               }
@@ -87,11 +74,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 itemCount: entries.length,
                 itemBuilder: (context, index) {
-                  final entry = entries[index];
+                  final data = entries[index].data() as Map<String, dynamic>;
+                  final entry = {'uid': entries[index].id, ...data};
                   final isCurrentUser = entry['uid'] == currentUid;
                   final rankLabel = index < 3 ? ['1', '2', '3'][index] : '${index + 1}';
                   final name = entry['name'] as String? ?? 'Unknown';
-                  final totalWeight = (entry['totalWeight'] as num?)?.toDouble() ?? 0.0;
+                  final totalBottleCount = (entry['totalBottleCount'] as num?)?.toInt() ?? 0;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -131,7 +119,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        'Total Waste: ${totalWeight.toStringAsFixed(2)} kg',
+                        'Bottles: $totalBottleCount',
                         style: AppTextStyles.bodyMedium,
                       ),
                       trailing: isCurrentUser

@@ -89,8 +89,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                         _heroStat('${user.sessionCount}', 'Sessions'),
                         _divider(),
                         _heroStat(
-                            '${user.totalWeight.toStringAsFixed(1)} kg',
-                            'Recycled'),
+                            '${user.totalBottleCount}',
+                            'Bottles'),
                         _divider(),
                         _heroStat(
                             'GHS ${user.totalEarnings.toStringAsFixed(2)}',
@@ -212,7 +212,6 @@ class _SessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final startTime = session['startTime'] as DateTime;
     final bottleCount = session['bottleCount'] as int;
-    final totalWeight = session['totalWeight'] as double;
     final totalEarnings = session['totalEarnings'] as double;
     final machineId = session['machineId'] as String;
 
@@ -247,8 +246,7 @@ class _SessionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$bottleCount bottle${bottleCount == 1 ? '' : 's'} · '
-                  '${totalWeight.toStringAsFixed(2)} kg',
+                  '$bottleCount bottle${bottleCount == 1 ? '' : 's'}',
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: 2),

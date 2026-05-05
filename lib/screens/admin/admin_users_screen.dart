@@ -184,7 +184,7 @@ class _UserTile extends StatelessWidget {
                 Text('${user.sessionCount} sessions',
                     style: AppTextStyles.labelSmall),
                 const SizedBox(height: 2),
-                Text('${user.totalWeight.toStringAsFixed(1)} kg',
+                Text('${user.totalBottleCount} bottles',
                     style: AppTextStyles.labelSmall),
               ],
             ),

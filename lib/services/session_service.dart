@@ -43,7 +43,6 @@ class SessionService {
       final map = b as Map<String, dynamic>;
       return BottleItem(
         materialType: _materialFromString(map['materialType'] as String),
-        weightKg: (map['weightKg'] as num).toDouble(),
         earnings: (map['earnings'] as num).toDouble(),
         co2Saved: (map['co2Saved'] as num).toDouble(),
         scannedAt: (map['scannedAt'] as Timestamp).toDate(),
@@ -135,12 +134,10 @@ class SessionService {
           : null,
       'bottles': session.bottles.map((b) => {
         'materialType': b.materialType.name,
-        'weightKg': b.weightKg,
         'earnings': b.earnings,
         'co2Saved': b.co2Saved,
         'scannedAt': Timestamp.fromDate(b.scannedAt),
       }).toList(),
-      'totalWeight': session.totalWeight,
       'totalEarnings': session.totalEarnings,
       'totalCo2Saved': session.totalCo2Saved,
       'bottleCount': session.bottleCount,
@@ -151,18 +148,18 @@ class SessionService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    _db.collection('users').doc(uid).update({
-      'totalWeight': FieldValue.increment(session.totalWeight),
+    _db.collection('users').doc(uid).set({
+      'totalBottleCount': FieldValue.increment(session.bottleCount),
       'totalEarnings': FieldValue.increment(session.totalEarnings),
       'totalCo2Saved': FieldValue.increment(session.totalCo2Saved),
       'sessionCount': FieldValue.increment(1),
-    });
+    }, SetOptions(merge: true));
   }
 
   // --- Aggregates ---
 
-  double get totalWeight =>
-      _completedSessions.fold(0.0, (sum, s) => sum + s.totalWeight);
+  int get totalBottleCount =>
+      _completedSessions.fold(0, (sum, s) => sum + s.bottleCount);
 
   double get totalEarnings =>
       _completedSessions.fold(0.0, (sum, s) => sum + s.totalEarnings);
@@ -172,17 +169,17 @@ class SessionService {
 
   int get sessionCount => _completedSessions.length;
 
-  double get plasticWeight => _completedSessions.fold(
-      0.0,
+  int get plasticCount => _completedSessions.fold(
+      0,
       (sum, s) => sum +
           s.bottles
               .where((b) => b.materialType == MaterialType.plastic)
-              .fold(0.0, (bSum, b) => bSum + b.weightKg));
+              .length);
 
-  double get glassWeight => _completedSessions.fold(
-      0.0,
+  int get glassCount => _completedSessions.fold(
+      0,
       (sum, s) => sum +
           s.bottles
               .where((b) => b.materialType == MaterialType.glass)
-              .fold(0.0, (bSum, b) => bSum + b.weightKg));
+              .length);
 }

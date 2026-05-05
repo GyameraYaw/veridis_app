@@ -33,7 +33,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final data = await AuthService().getUserDoc();
     if (!mounted) return;
     final full = data?['name'] as String? ?? '';
-    setState(() => _firstName = full.split(' ').first);
+    if (full.isEmpty) {
+      setState(() => _selectedIndex = 3);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete your profile details.')),
+      );
+    } else {
+      setState(() => _firstName = full.split(' ').first);
+    }
   }
 
   // Getter (not const) so Statistics/Profile always rebuild with fresh data
@@ -161,8 +168,8 @@ class _HomeContentState extends State<HomeContent> {
                 Row(
                   children: [
                     _heroStat(
-                      '${_svc.totalWeight.toStringAsFixed(1)} kg',
-                      'Recycled',
+                      '${_svc.totalBottleCount}',
+                      'Bottles',
                     ),
                     Container(
                       width: 1,
@@ -199,8 +206,8 @@ class _HomeContentState extends State<HomeContent> {
               Expanded(
                 child: _buildMetricCard(
                   icon: Icons.recycling,
-                  value: '${_svc.totalWeight.toStringAsFixed(1)} kg',
-                  label: 'Waste Segregated',
+                  value: '${_svc.totalBottleCount}',
+                  label: 'Bottles Recycled',
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -262,45 +269,52 @@ class _HomeContentState extends State<HomeContent> {
           // ── Quick Actions ──────────────────────────────────────────────
           const Text('Quick Actions', style: AppTextStyles.headlineMedium),
           const SizedBox(height: AppSpacing.md),
+          // Primary action — full width
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QrScanScreen()),
+                ).then((_) => setState(() {}));
+              },
+              icon: const Icon(Icons.qr_code_scanner, size: 22),
+              label: const Text('Start Session'),
+              style: ElevatedButton.styleFrom(
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // Secondary actions — side by side
           Row(
             children: [
               Expanded(
-                child: _buildActionButton(
-                  icon: Icons.qr_code_scanner,
-                  label: 'Start\nSession',
+                child: _buildSecondaryAction(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'My Wallet',
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const QrScanScreen()),
+                      MaterialPageRoute(builder: (_) => const WalletScreen()),
                     ).then((_) => setState(() {}));
                   },
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: _buildActionButton(
-                  icon: Icons.account_balance_wallet,
-                  label: 'My\nWallet',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const WalletScreen()),
-                    ).then((_) => setState(() {}));
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildActionButton(
+                child: _buildSecondaryAction(
                   icon: Icons.history,
                   label: 'History',
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const HistoryScreen()),
+                      MaterialPageRoute(builder: (_) => const HistoryScreen()),
                     );
                   },
                 ),
@@ -365,29 +379,22 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildSecondaryAction({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
   }) {
-    return SizedBox(
-      height: 80,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 26, color: Colors.white),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 11),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        side: const BorderSide(color: AppColors.forestGreen),
+        foregroundColor: AppColors.forestGreen,
+        textStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

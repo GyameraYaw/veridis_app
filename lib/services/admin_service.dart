@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/admin_user.dart';
 import '../models/bin_status.dart';
+import 'paystack_service.dart';
 
 class PendingWithdrawal {
   final String txId;
@@ -44,12 +45,12 @@ class AdminService {
   Future<Map<String, dynamic>> fetchDashboardStats() async {
     final usersSnap = await _db.collection('users').get();
     int totalUsers = 0;
-    double totalWeightKg = 0.0;
+    int totalBottleCount = 0;
     for (final doc in usersSnap.docs) {
       final data = doc.data();
       if (data['isAdmin'] == true) continue;
       totalUsers++;
-      totalWeightKg += (data['totalWeight'] as num? ?? 0).toDouble();
+      totalBottleCount += (data['totalBottleCount'] as num? ?? 0).toInt();
     }
 
     final pendingSnap = await _db
@@ -64,7 +65,7 @@ class AdminService {
 
     return {
       'totalUsers': totalUsers,
-      'totalWeightKg': double.parse(totalWeightKg.toStringAsFixed(2)),
+      'totalBottleCount': totalBottleCount,
       'pendingCount': pendingCount,
       'pendingTotalGhs': double.parse(pendingTotalGhs.toStringAsFixed(2)),
     };
@@ -87,7 +88,7 @@ class AdminService {
         name: data['name'] as String? ?? '',
         email: data['email'] as String? ?? '',
         mobileMoneyNumber: data['mobileMoneyNumber'] as String? ?? '',
-        totalWeight: (data['totalWeight'] as num? ?? 0).toDouble(),
+        totalBottleCount: (data['totalBottleCount'] as num? ?? 0).toInt(),
         totalEarnings: (data['totalEarnings'] as num? ?? 0).toDouble(),
         sessionCount: (data['sessionCount'] as num? ?? 0).toInt(),
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -113,7 +114,6 @@ class AdminService {
         'machineId': data['machineId'] as String? ?? '',
         'startTime': (data['startTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
         'bottleCount': (data['bottleCount'] as num? ?? 0).toInt(),
-        'totalWeight': (data['totalWeight'] as num? ?? 0).toDouble(),
         'totalEarnings': (data['totalEarnings'] as num? ?? 0).toDouble(),
       };
     }).toList();
@@ -138,6 +138,24 @@ class AdminService {
         'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       };
     }).toList();
+  }
+
+  // ── Migration ─────────────────────────────────────────────────────────────
+
+  Future<void> migrateBottleCounts() async {
+    final usersSnap = await _db.collection('users').get();
+    for (final userDoc in usersSnap.docs) {
+      if (userDoc.data()['isAdmin'] == true) continue;
+      final sessionsSnap = await _db
+          .collection('sessions')
+          .where('userId', isEqualTo: userDoc.id)
+          .get();
+      int total = 0;
+      for (final s in sessionsSnap.docs) {
+        total += (s.data()['bottleCount'] as num? ?? 0).toInt();
+      }
+      await _db.collection('users').doc(userDoc.id).update({'totalBottleCount': total});
+    }
   }
 
   // ── Withdrawal Processing ─────────────────────────────────────────────────
@@ -185,10 +203,23 @@ class AdminService {
     return match?.group(1) ?? '';
   }
 
-  Future<void> markWithdrawalPaid(String txId) async {
-    await _db.collection('walletTransactions').doc(txId).update({
+  Future<String> markWithdrawalPaid(PendingWithdrawal withdrawal) async {
+    if (withdrawal.mobileMoneyNumber.trim().isEmpty) {
+      throw const PaystackTransferException('No mobile money number on file.');
+    }
+
+    final transferCode = await PaystackService().sendMoMoPayout(
+      name: withdrawal.userName,
+      number: withdrawal.mobileMoneyNumber,
+      amountGhs: withdrawal.amount,
+    );
+
+    await _db.collection('walletTransactions').doc(withdrawal.txId).update({
       'isPending': false,
+      'paystackTransferCode': transferCode,
     });
+
+    return transferCode;
   }
 
   Future<void> rejectWithdrawal({

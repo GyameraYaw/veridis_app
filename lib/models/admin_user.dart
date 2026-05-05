@@ -3,7 +3,7 @@ class AdminUser {
   final String name;
   final String email;
   final String mobileMoneyNumber;
-  final double totalWeight;
+  final int totalBottleCount;
   final double totalEarnings;
   final int sessionCount;
   final DateTime createdAt;
@@ -13,7 +13,7 @@ class AdminUser {
     required this.name,
     required this.email,
     required this.mobileMoneyNumber,
-    required this.totalWeight,
+    required this.totalBottleCount,
     required this.totalEarnings,
     required this.sessionCount,
     required this.createdAt,

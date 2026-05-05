@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart' hide MaterialType;
 import 'dart:async';
 import 'dart:math';
+
 import '../models/recycling_session.dart'; // also exports BottleItem
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
@@ -12,7 +13,6 @@ enum _BottleStep {
   detecting,
   capturing,
   classifying,
-  weighing,
   sorting,
   bottleResult,
   sessionSummary,
@@ -28,13 +28,11 @@ class ActiveSessionScreen extends StatefulWidget {
 class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   _BottleStep _step = _BottleStep.waiting;
   MaterialType? _currentMaterial;
-  double? _currentWeight;
 
   static const List<_BottleStep> _pipeline = [
     _BottleStep.detecting,
     _BottleStep.capturing,
     _BottleStep.classifying,
-    _BottleStep.weighing,
     _BottleStep.sorting,
   ];
 
@@ -55,23 +53,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     _currentMaterial =
         rng.nextBool() ? MaterialType.plastic : MaterialType.glass;
 
-    // Step 4: Load cell + HX711 weighs bottle (~0.8s)
-    setState(() => _step = _BottleStep.weighing);
-    await Future.delayed(const Duration(milliseconds: 800));
-    // TODO: Replace with actual HX711 weight reading
-    _currentWeight =
-        double.parse((0.1 + rng.nextDouble() * 1.4).toStringAsFixed(2));
-
-    // Step 5: Servo gate sorts bottle (~0.5s) — total ~4.1s
+    // Step 4: Servo gate sorts bottle (~0.5s)
     setState(() => _step = _BottleStep.sorting);
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Add this bottle to the active session
     final bottle = BottleItem(
       materialType: _currentMaterial!,
-      weightKg: _currentWeight!,
-      earnings: RecyclingSession.earningsFor(_currentMaterial!, _currentWeight!),
-      co2Saved: RecyclingSession.co2For(_currentMaterial!, _currentWeight!),
+      earnings: RecyclingSession.earningsFor(_currentMaterial!),
+      co2Saved: RecyclingSession.co2For(_currentMaterial!),
       scannedAt: DateTime.now(),
     );
     SessionService().addBottleToActive(bottle);
@@ -83,7 +73,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     setState(() {
       _step = _BottleStep.waiting;
       _currentMaterial = null;
-      _currentWeight = null;
     });
   }
 
@@ -284,11 +273,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             'Classifying material...',
             Icons.science
           ),
-        _BottleStep.weighing => (
-            'Load Cell (HX711)',
-            'Measuring weight...',
-            Icons.scale
-          ),
         _BottleStep.sorting => (
             'Servo Gate',
             'Activating sorting gate...',
@@ -301,8 +285,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
 
   Widget _buildBottleResult(RecyclingSession? session) {
     final m = _currentMaterial!;
-    final w = _currentWeight!;
-    final earnings = RecyclingSession.earningsFor(m, w);
+    final earnings = RecyclingSession.earningsFor(m);
     final isPlastic = m == MaterialType.plastic;
     final bottles = session?.bottles ?? [];
 
@@ -332,13 +315,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   label: 'Material',
                   value: isPlastic ? 'Plastic' : 'Glass',
                   color: isPlastic ? AppColors.freshGreen : AppColors.midGreen,
-                ),
-                const Divider(),
-                _resultRow(
-                  icon: Icons.scale,
-                  label: 'Weight',
-                  value: '${w.toStringAsFixed(2)} kg',
-                  color: AppColors.freshGreen,
                 ),
                 const Divider(),
                 _resultRow(
@@ -421,13 +397,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 ),
                 const Divider(),
                 _resultRow(
-                  icon: Icons.scale,
-                  label: 'Total Weight',
-                  value: '${session.totalWeight.toStringAsFixed(2)} kg',
-                  color: AppColors.freshGreen,
-                ),
-                const Divider(),
-                _resultRow(
                   icon: Icons.attach_money,
                   label: 'Total Earnings',
                   value: 'GHS ${session.totalEarnings.toStringAsFixed(2)}',
@@ -469,7 +438,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 ),
                 title: Text('Bottle ${i + 1}: ${b.materialLabel}'),
-                subtitle: Text('${b.weightKg.toStringAsFixed(2)} kg'),
+                subtitle: Text('GHS ${b.earnings.toStringAsFixed(2)}'),
                 trailing: Text(
                   'GHS ${b.earnings.toStringAsFixed(2)}',
                   style: const TextStyle(
@@ -511,8 +480,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         children: [
           _tallyItem('${session.bottleCount}', 'Bottles',
               Icons.format_list_numbered),
-          _tallyItem('${session.totalWeight.toStringAsFixed(2)} kg',
-              'Total Weight', Icons.scale),
           _tallyItem('GHS ${session.totalEarnings.toStringAsFixed(2)}',
               'Earnings', Icons.attach_money),
         ],

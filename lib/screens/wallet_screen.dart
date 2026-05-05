@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wallet_transaction.dart';
 import '../services/wallet_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
 
@@ -13,10 +14,21 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   final _wallet = WalletService();
+  String _savedMomoNumber = '';
+  bool _seenIdsSeeded = false;
+  final Set<String> _seenIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _wallet.getSavedMomoNumber().then((n) {
+      if (mounted) setState(() => _savedMomoNumber = n);
+    });
+  }
 
   void _showWithdrawSheet() {
     final amountController = TextEditingController();
-    final momoController = TextEditingController();
+    final momoController = TextEditingController(text: _savedMomoNumber);
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -116,181 +128,210 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final transactions = _wallet.transactions;
-
     return ResponsiveWrapper(
       child: Scaffold(
         appBar: AppBar(title: const Text('My Wallet')),
-        body: Column(
-          children: [
-            // ── Hero balance header ────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.forestGreen, AppColors.freshGreen],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(AppRadius.hero),
-                  bottomRight: Radius.circular(AppRadius.hero),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Text('Available Balance', style: AppTextStyles.heroLabel),
-                  const SizedBox(height: 8),
-                  Text(
-                    'GHS ${_wallet.balance.toStringAsFixed(2)}',
-                    style: AppTextStyles.heroDisplayLarge,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: 200,
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          _wallet.balance > 0 ? _showWithdrawSheet : null,
-                      icon: const Icon(Icons.arrow_upward, size: 16),
-                      label: const Text('Withdraw to MoMo'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.forestGreen,
-                        disabledBackgroundColor: Colors.white38,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        body: StreamBuilder<List<WalletTransaction>>(
+          stream: _wallet.streamTransactions(),
+          builder: (context, snapshot) {
+            final transactions = snapshot.data ?? _wallet.transactions;
 
-            // ── Transaction history ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Transaction History',
-                  style: AppTextStyles.titleLarge,
-                ),
-              ),
-            ),
-            Expanded(
-              child: transactions.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.account_balance_wallet_outlined,
-                            size: 64,
-                            color: AppColors.textDisabled,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          const Text(
-                            'No transactions yet.',
-                            style: AppTextStyles.bodyLarge,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          const Text(
-                            'Complete a recycling session to earn rewards.',
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md),
-                      itemCount: transactions.length,
-                      itemBuilder: (context, index) {
-                        final t = transactions[index];
-                        final isCredit = t.type == TransactionType.credit;
-                        return Container(
-                          margin:
-                              const EdgeInsets.only(bottom: AppSpacing.sm),
-                          decoration: AppDecorations.contentCard,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.mintGreen,
-                              child: Icon(
-                                isCredit
-                                    ? Icons.arrow_downward
-                                    : Icons.arrow_upward,
-                                color: isCredit
-                                    ? AppColors.freshGreen
-                                    : AppColors.midGreen,
-                              ),
-                            ),
-                            title: Text(
-                              t.description,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            subtitle: Row(
-                              children: [
-                                Text(
-                                  _formatDate(t.timestamp),
-                                  style: AppTextStyles.labelSmall,
-                                ),
-                                if (t.isPending) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.pendingAmber
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'Pending',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.pendingAmber
-                                            .withValues(alpha: 0.9),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            trailing: Text(
-                              '${isCredit ? '+' : '-'}GHS ${t.amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: isCredit
-                                    ? AppColors.earningsGreen
-                                    : AppColors.textBody,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+            // Detect new credit transactions and show notifications
+            if (snapshot.hasData) {
+              if (!_seenIdsSeeded) {
+                _seenIds.addAll(transactions.map((t) => t.id));
+                _seenIdsSeeded = true;
+              } else {
+                for (final t in transactions) {
+                  if (!_seenIds.contains(t.id) &&
+                      t.type == TransactionType.credit) {
+                    NotificationService.showCreditAlert(t.amount);
+                  }
+                  _seenIds.add(t.id);
+                }
+              }
+            }
+
+            final balance = transactions.fold(0.0, (sum, t) {
+              return t.type == TransactionType.credit
+                  ? sum + t.amount
+                  : sum - t.amount;
+            });
+
+            return Column(
+              children: [
+                // ── Hero balance header ──────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                  ),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.forestGreen, AppColors.freshGreen],
                     ),
-            ),
-          ],
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(AppRadius.hero),
+                      bottomRight: Radius.circular(AppRadius.hero),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text('Available Balance',
+                          style: AppTextStyles.heroLabel),
+                      const SizedBox(height: 8),
+                      Text(
+                        'GHS ${balance.toStringAsFixed(2)}',
+                        style: AppTextStyles.heroDisplayLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(
+                        width: 200,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: balance > 0 ? _showWithdrawSheet : null,
+                          icon: const Icon(Icons.arrow_upward, size: 16),
+                          label: const Text('Withdraw to MoMo'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.forestGreen,
+                            disabledBackgroundColor: Colors.white38,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Transaction history ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Transaction History',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: transactions.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.account_balance_wallet_outlined,
+                                size: 64,
+                                color: AppColors.textDisabled,
+                              ),
+                              SizedBox(height: AppSpacing.md),
+                              Text(
+                                'No transactions yet.',
+                                style: AppTextStyles.bodyLarge,
+                              ),
+                              SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'Complete a recycling session to earn rewards.',
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md),
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final t = transactions[index];
+                            final isCredit =
+                                t.type == TransactionType.credit;
+                            return Container(
+                              margin: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm),
+                              decoration: AppDecorations.contentCard,
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: AppColors.mintGreen,
+                                  child: Icon(
+                                    isCredit
+                                        ? Icons.arrow_downward
+                                        : Icons.arrow_upward,
+                                    color: isCredit
+                                        ? AppColors.freshGreen
+                                        : AppColors.midGreen,
+                                  ),
+                                ),
+                                title: Text(
+                                  t.description,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: Row(
+                                  children: [
+                                    Text(
+                                      _formatDate(t.timestamp),
+                                      style: AppTextStyles.labelSmall,
+                                    ),
+                                    if (t.isPending) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.pendingAmber
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Pending',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.pendingAmber
+                                                .withValues(alpha: 0.9),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                trailing: Text(
+                                  '${isCredit ? '+' : '-'}GHS ${t.amount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: isCredit
+                                        ? AppColors.earningsGreen
+                                        : AppColors.textBody,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

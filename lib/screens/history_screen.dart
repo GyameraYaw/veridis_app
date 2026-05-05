@@ -57,7 +57,7 @@ class HistoryScreen extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        '${s.bottleCount} bottle${s.bottleCount == 1 ? '' : 's'} — ${s.totalWeight.toStringAsFixed(2)} kg',
+                        '${s.bottleCount} bottle${s.bottleCount == 1 ? '' : 's'}',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(

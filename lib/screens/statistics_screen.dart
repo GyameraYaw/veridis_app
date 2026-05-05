@@ -36,9 +36,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  icon: Icons.scale,
-                  value: '${_svc.totalWeight.toStringAsFixed(2)} kg',
-                  label: 'Total Waste Processed',
+                  icon: Icons.recycling,
+                  value: '${_svc.totalBottleCount}',
+                  label: 'Bottles Recycled',
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -92,7 +92,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     child: _buildMaterialBreakdown(
                       icon: Icons.water_drop,
                       label: 'Plastic',
-                      value: '${_svc.plasticWeight.toStringAsFixed(2)} kg',
+                      value: '${_svc.plasticCount} bottles',
                       color: AppColors.freshGreen,
                     ),
                   ),
@@ -105,7 +105,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     child: _buildMaterialBreakdown(
                       icon: Icons.local_drink,
                       label: 'Glass',
-                      value: '${_svc.glassWeight.toStringAsFixed(2)} kg',
+                      value: '${_svc.glassCount} bottles',
                       color: AppColors.midGreen,
                     ),
                   ),
@@ -156,7 +156,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           ),
                         ),
                         title: Text(
-                          '${s.bottleCount} bottle${s.bottleCount == 1 ? '' : 's'} — ${s.totalWeight.toStringAsFixed(2)} kg',
+                          '${s.bottleCount} bottle${s.bottleCount == 1 ? '' : 's'}',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(_formatDate(s.startTime)),

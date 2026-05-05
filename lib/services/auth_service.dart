@@ -22,23 +22,46 @@ class AuthService {
       email: email,
       password: password,
     );
-    await _db.collection('users').doc(credential.user!.uid).set({
-      'name': name,
-      'email': email,
-      'mobileMoneyNumber': mobileMoneyNumber,
-      'createdAt': FieldValue.serverTimestamp(),
-      'totalWeight': 0.0,
-      'totalEarnings': 0.0,
-      'totalCo2Saved': 0.0,
-      'sessionCount': 0,
-    });
+    try {
+      await credential.user!.updateDisplayName(name);
+      await _db.collection('users').doc(credential.user!.uid).set({
+        'name': name,
+        'email': email,
+        'mobileMoneyNumber': mobileMoneyNumber,
+        'createdAt': FieldValue.serverTimestamp(),
+        'totalBottleCount': 0,
+        'totalEarnings': 0.0,
+        'totalCo2Saved': 0.0,
+        'sessionCount': 0,
+      });
+    } catch (e) {
+      await credential.user?.delete();
+      rethrow;
+    }
   }
 
   Future<void> signIn({
     required String email,
     required String password,
   }) async {
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final uid = credential.user!.uid;
+    final doc = await _db.collection('users').doc(uid).get();
+    if (!doc.exists) {
+      await _db.collection('users').doc(uid).set({
+        'name': credential.user!.displayName ?? '',
+        'email': credential.user!.email ?? '',
+        'mobileMoneyNumber': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'totalBottleCount': 0,
+        'totalEarnings': 0.0,
+        'totalCo2Saved': 0.0,
+        'sessionCount': 0,
+      });
+    }
   }
 
   Future<void> signOut() async {

@@ -151,9 +151,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildStatCard(
-                  icon: Icons.eco,
-                  value: '${_svc.totalWeight.toStringAsFixed(2)} kg',
-                  label: 'Total Waste',
+                  icon: Icons.recycling,
+                  value: '${_svc.totalBottleCount}',
+                  label: 'Bottles',
                 ),
               ),
             ],

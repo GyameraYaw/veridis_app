@@ -56,6 +56,30 @@ class WalletService {
     );
   }
 
+  Stream<List<WalletTransaction>> streamTransactions() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+    return _db
+        .collection('walletTransactions')
+        .where('userId', isEqualTo: uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) {
+      final txs = snap.docs.map(_txFromDoc).toList();
+      _transactions
+        ..clear()
+        ..addAll(txs);
+      return List.unmodifiable(txs);
+    });
+  }
+
+  Future<String> getSavedMomoNumber() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return '';
+    final doc = await _db.collection('users').doc(uid).get();
+    return doc.data()?['mobileMoneyNumber'] as String? ?? '';
+  }
+
   void clearLocalData() {
     _transactions.clear();
   }
